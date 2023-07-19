@@ -1,28 +1,26 @@
-﻿using Microsoft.Extensions.Options;
+﻿using BookManager.Context;
 using Dapper;
-using System.Data;
-using System.Data.SqlClient;
 
 namespace BookManager
 {
     public class BookService
     {
-        private readonly IServiceProvider serviceProvider;
-
-        public BookService(IServiceProvider serviceProvider)
+        private readonly DapperContext context;
+        public BookService(DapperContext context)
         {
-            this.serviceProvider = serviceProvider;
+            this.context = context;
         }
         public async Task<IEnumerable<Book>> GetAllAsync()
         {
-            var dbConnection = serviceProvider.GetService<IDbConnection>();
-            return await dbConnection.QueryAsync<Book>("Select * from dbo.Books");
+            using var dbConnection = context.CreateConnection();
+            var books = await dbConnection.QueryAsync<Book>("Select * from dbo.Books");
+            return books.ToList();
         }
         public async Task<Book> CreateAsync(Book book)
         {
-            var dbConnection = serviceProvider.GetService<IDbConnection>();
+            using var dbConnection = context.CreateConnection();
             book.Id = Guid.NewGuid();
-            await dbConnection.ExecuteAsync("Insert INTO Books (Id,Name,Author,PublishedYear) Values (@Id, @Name, @Author, @PublishedYear)", book);
+            var result = await dbConnection.ExecuteAsync("Insert INTO Books (Id,Name,Author,PublishedYear) Values (@Id, @Name, @Author, @PublishedYear)", book);
             return book;
         }
     }
